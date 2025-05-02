@@ -4,10 +4,10 @@ from src.metadata_utils import extract_metadata, compute_sha256, save_metadata
 from src.text_extraction import extract_text_from_pdf
 import os
 
+from src.configs import USER_AGENT, TEXT_DIR, DOWNLOAD_DIR
+
+
 BASE_URL = "https://sanskritdocuments.org/scannedbooks/asisanskritpdfs.html"
-USER_AGENT = "MyEduScraper/1.0 (Educational Project)"
-DOWNLOAD_DIR = "Data Harvest/downloads"
-TEXT_OUTPUT_DIR = "Data Harvest/text"
 
 
 def process_file(file_path, url):
@@ -27,9 +27,9 @@ def process_file(file_path, url):
     })
 
     if ext == "pdf":
-        os.makedirs(TEXT_OUTPUT_DIR, exist_ok=True)
+        os.makedirs(TEXT_DIR, exist_ok=True)
         text_filename = f"{domain}__{base}__{sha256[:8]}.txt"
-        text_output_path = os.path.join(TEXT_OUTPUT_DIR, text_filename)
+        text_output_path = os.path.join(TEXT_DIR, text_filename)
         extract_text_from_pdf(file_path, text_output_path)
         metadata['content'] = text_output_path  # Add only if text is extracted
 
@@ -40,7 +40,7 @@ def main():
     print("[Start] Harvesting process")
     downloaded_files = run_crawler(BASE_URL, DOWNLOAD_DIR, USER_AGENT)
 
-    os.makedirs(TEXT_OUTPUT_DIR, exist_ok=True)
+    os.makedirs(TEXT_DIR, exist_ok=True)
 
     for file_path, url in downloaded_files:
         process_file(file_path, url)

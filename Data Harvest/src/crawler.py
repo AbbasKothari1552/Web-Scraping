@@ -6,9 +6,7 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from .utils import is_allowed, is_internal_link, should_download_file, generate_unique_filename
 
-USER_AGENT = "MyEduScraper/1.0 (Educational Project)"
-BASE_URL = "https://sanskritdocuments.org/scannedbooks/asisanskritpdfs.html"
-DOWNLOAD_DIR = "Data Harvest/downloads"
+
 VISITED = set()
 
 

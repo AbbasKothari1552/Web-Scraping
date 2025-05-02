@@ -2,4 +2,8 @@ virt
 test.py
 __pycache__/
 **/__pycache__/**
-Data Harvest/downloads/** 
+Data Harvest/downloads/epubs/** 
+Data Harvest/downloads/html/** 
+Data Harvest/downloads/pdfs/** 
+Data Harvest/json/**
+Data Harvest/text/**

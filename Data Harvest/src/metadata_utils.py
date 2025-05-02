@@ -150,3 +150,37 @@ def save_metadata(metadata, output_dir="Data Harvest/json"):
         json.dump(metadata, f, ensure_ascii=False, indent=4)
     
     print(f"Saved metadata to {output_path}")
+
+
+if __name__ == "__main__":
+    import sys
+    from configs import JSON_DIR  # Add config import if needed
+
+    if len(sys.argv) < 2:
+        print("Usage: python metadata_utils.py <path_to_pdf>")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+
+    if not os.path.exists(file_path):
+        print(f"Error: File not found: {file_path}")
+        sys.exit(1)
+
+    filename = os.path.basename(file_path)
+    filename = os.path.splitext(filename)[0]
+    ext = file_path.split('.')[-1].lower()
+
+    json_path = os.path.join(JSON_DIR, f"{filename}.json")
+    if os.path.exists(json_path):
+        print("File already exists")
+        sys.exit(1)
+
+    metadata = extract_metadata(file_path, ext)
+    sha256 = compute_sha256(file_path)
+    metadata.update({
+        "document_id": filename,
+        "checksum": sha256,
+        "file_path": file_path,
+    })
+
+    save_metadata(metadata, output_dir=JSON_DIR)
