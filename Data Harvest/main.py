@@ -7,28 +7,30 @@ import os
 from src.configs import USER_AGENT, TEXT_DIR, DOWNLOAD_DIR
 
 
-BASE_URL = "https://sanskritdocuments.org/scannedbooks/asisanskritpdfs.html"
+BASE_URL = "https://sample-files.com/documents/pdf/"
 
 
 def process_file(file_path, url):
-    ext = file_path.split('.')[-1].lower()
     sha256 = compute_sha256(file_path)
-    document_id = f"{ext}_{sha256[:8]}"
-    
-    domain = url.split('/')[2].replace('.', '_')
-    base = os.path.basename(file_path).split('.')[0]
+
+    filename = os.path.basename(file_path)
+    filename = os.path.splitext(filename)[0]
+    ext = file_path.split('.')[-1].lower()
+
+    text_filename = f"{filename}.txt"
+    text_output_path = os.path.join(TEXT_DIR, text_filename)
 
     metadata = extract_metadata(file_path, ext)
     metadata.update({
         'checksum': sha256,
-        'document_id': document_id,
+        'document_id': filename,
         'download_url': url,
         'file_path': file_path,
     })
 
     if ext == "pdf":
         os.makedirs(TEXT_DIR, exist_ok=True)
-        text_filename = f"{domain}__{base}__{sha256[:8]}.txt"
+        text_filename = f"{filename}.txt"
         text_output_path = os.path.join(TEXT_DIR, text_filename)
         extract_text_from_pdf(file_path, text_output_path)
         metadata['content'] = text_output_path  # Add only if text is extracted

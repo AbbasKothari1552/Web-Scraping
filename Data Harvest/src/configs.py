@@ -8,7 +8,7 @@ USER_AGENT = "MyEduScraper/1.0 (Educational Project)"
 # === Directory Paths ===
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-DOWNLOAD_DIR = os.path.join(BASE_DIR, 'Data Harvest/text')
+DOWNLOAD_DIR = os.path.join(BASE_DIR, 'downloads')
 TEXT_DIR = os.path.join(BASE_DIR, 'text')
 JSON_DIR = os.path.join(BASE_DIR, 'json')
 

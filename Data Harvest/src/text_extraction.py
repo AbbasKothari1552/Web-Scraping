@@ -3,8 +3,12 @@ from pdfminer.high_level import extract_text as extract_pdf_text
 from pdf2image import convert_from_path
 import pytesseract
 import hashlib
+import os
+import sys
 
-from configs import TESSERACT_PATH, OCR_LANGUAGES
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from .configs import TESSERACT_PATH, OCR_LANGUAGES
 
 # Set the tesseract path
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
