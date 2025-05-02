@@ -1,0 +1,8 @@
+requests
+beautifulsoup4
+PyPDF2
+EbookLib
+pdfminer.six
+langdetect
+pytesseract
+pdf2image

@@ -1,0 +1,5 @@
+virt
+test.py
+__pycache__/
+**/__pycache__/**
+Data Harvest/downloads/** 
