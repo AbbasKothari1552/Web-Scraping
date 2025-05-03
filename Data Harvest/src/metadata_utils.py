@@ -3,21 +3,28 @@ from ebooklib import epub
 from pdfminer.high_level import extract_text
 from langdetect import detect
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 import re
 import hashlib
 import json
 import os
 
 
-def extract_metadata(file_path, file_type):
+def extract_metadata(file_path, file_type, url=None):
+    metadata = {}
     if file_type == "pdf":
-        return extract_pdf_info(file_path)
+        metadata = extract_pdf_info(file_path)
     elif file_type == "epub":
-        return extract_epub_info(file_path)
+        metadata = extract_epub_info(file_path)
     elif file_type == "html":
-        return extract_html_info(file_path)
-    else:
-        return {}
+        metadata = extract_html_info(file_path)
+
+    # Extract site from URL (e.g., "ayushportal.nic.in")
+    if url:
+        domain = urlparse(url).netloc
+        metadata["site"] = domain
+
+    return metadata
 
 
 def extract_pdf_info(file_path):
@@ -71,6 +78,13 @@ def extract_epub_info(file_path):
     pub_year = "N/A"
 
     try:
+        date_meta = book.get_metadata('DC', 'date')
+        if date_meta:
+            pub_year = re.search(r'\d{4}', date_meta[0][0]).group(0)  # Extract first 4-digit year
+    except:
+        pass
+
+    try:
         book = epub.read_epub(file_path)
         title = book.get_metadata('DC', 'title')[0][0] if book.get_metadata('DC', 'title') else "N/A"
         authors_raw = book.get_metadata('DC', 'creator')
@@ -103,6 +117,13 @@ def extract_html_info(file_path):
                     authors = normalize_authors(authors_raw)
                 if meta.get("name") == "language":
                     language = meta.get("content", "N/A")
+            for meta in soup.find_all("meta"):
+                if meta.get("name") in ["date", "publication_date"]:
+                    pub_year = re.search(r'\d{4}', meta.get("content", "")).group(0)
+            if pub_year == "N/A":
+                year_matches = re.findall(r'(?:19|20)\d{2}', soup.get_text())
+                if year_matches:
+                    pub_year = max(set(year_matches), key=year_matches.count)
     except Exception as e:
         print(f"[HTML metadata error] {e}")
 
@@ -114,6 +135,12 @@ def extract_html_info(file_path):
     }
 
 
+def format_as_iso8601(year_str):
+    if year_str == "N/A" or not year_str.isdigit():
+        return "N/A"
+    return f"{year_str}-01-01"  # Default to January 1 if only year is known
+
+
 def normalize_authors(authors_raw):
     if not authors_raw or authors_raw == "N/A":
         return []
@@ -122,11 +149,11 @@ def normalize_authors(authors_raw):
         # EPUB returns list from ebooklib already
         authors_raw = " ".join(authors_raw)
 
-    # Split on common separators: commas, semicolons, " and "
-    parts = re.split(r'\s*(?:,|;| and )\s*', authors_raw)
-
-    # Clean up each part
-    return [part.strip() for part in parts if part.strip()]
+    # Unified splitting: handle commas, semicolons, "and", "&"
+    parts = re.split(r'\s*(?:,|;|\band\b|\&)\s*', authors_raw, flags=re.IGNORECASE)
+    
+    # Remove empty strings and title case (e.g., "john doe" -> "John Doe")
+    return [part.strip().title() for part in parts if part.strip()]
 
 
 def compute_sha256(file_path):
@@ -152,35 +179,35 @@ def save_metadata(metadata, output_dir="Data Harvest/json"):
     print(f"Saved metadata to {output_path}")
 
 
-if __name__ == "__main__":
-    import sys
-    from configs import JSON_DIR  # Add config import if needed
+# if __name__ == "__main__":
+#     import sys
+#     from configs import JSON_DIR  # Add config import if needed
 
-    if len(sys.argv) < 2:
-        print("Usage: python metadata_utils.py <path_to_pdf>")
-        sys.exit(1)
+#     if len(sys.argv) < 2:
+#         print("Usage: python metadata_utils.py <path_to_pdf>")
+#         sys.exit(1)
 
-    file_path = sys.argv[1]
+#     file_path = sys.argv[1]
 
-    if not os.path.exists(file_path):
-        print(f"Error: File not found: {file_path}")
-        sys.exit(1)
+#     if not os.path.exists(file_path):
+#         print(f"Error: File not found: {file_path}")
+#         sys.exit(1)
 
-    filename = os.path.basename(file_path)
-    filename = os.path.splitext(filename)[0]
-    ext = file_path.split('.')[-1].lower()
+#     filename = os.path.basename(file_path)
+#     filename = os.path.splitext(filename)[0]
+#     ext = file_path.split('.')[-1].lower()
 
-    json_path = os.path.join(JSON_DIR, f"{filename}.json")
-    if os.path.exists(json_path):
-        print("File already exists")
-        sys.exit(1)
+#     json_path = os.path.join(JSON_DIR, f"{filename}.json")
+#     if os.path.exists(json_path):
+#         print("File already exists")
+#         sys.exit(1)
 
-    metadata = extract_metadata(file_path, ext)
-    sha256 = compute_sha256(file_path)
-    metadata.update({
-        "document_id": filename,
-        "checksum": sha256,
-        "file_path": file_path,
-    })
+#     metadata = extract_metadata(file_path, ext)
+#     sha256 = compute_sha256(file_path)
+#     metadata.update({
+#         "document_id": filename,
+#         "checksum": sha256,
+#         "file_path": file_path,
+#     })
 
-    save_metadata(metadata, output_dir=JSON_DIR)
+#     save_metadata(metadata, output_dir=JSON_DIR)

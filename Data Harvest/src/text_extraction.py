@@ -1,6 +1,8 @@
 import os
 from pdfminer.high_level import extract_text as extract_pdf_text
 from pdf2image import convert_from_path
+from ebooklib import epub
+from bs4 import BeautifulSoup
 import pytesseract
 import hashlib
 import os
@@ -48,49 +50,82 @@ def extract_text_from_pdf(pdf_path, txt_output_path):
     print(f"[Saved] Full text to: {txt_output_path}")
 
 
-if __name__ == "__main__":
-    import sys
-    import json
-    from configs import TEXT_DIR, JSON_DIR, TESSERACT_PATH, OCR_LANGUAGES
-    from metadata_utils import compute_sha256, save_metadata, extract_metadata
-    import os
+def extract_text_from_html(html_path, output_path):
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            soup = BeautifulSoup(f, 'html.parser')
+        text = soup.get_text(separator='\n', strip=True)
 
-    if len(sys.argv) < 2:
-        print("Usage: python text_extraction.py <path_to_pdf>")
-        sys.exit(1)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(text)
+        print(f"[Extracted] HTML text saved to: {output_path}")
+    except Exception as e:
+        print(f"[Error] Failed to extract HTML text: {e}")
 
-    file_path = sys.argv[1]
 
-    if not os.path.exists(file_path):
-        print(f"Error: File not found: {file_path}")
-        sys.exit(1)
+def extract_text_from_epub(epub_path, output_path):
+    try:
+        book = epub.read_epub(epub_path)
+        all_text = []
 
-    filename = os.path.basename(file_path)
-    filename = os.path.splitext(filename)[0]
-    ext = file_path.split('.')[-1].lower()
+        for item in book.get_items():
+            if item.get_type() == epub.ITEM_DOCUMENT:
+                soup = BeautifulSoup(item.get_content(), 'html.parser')
+                text = soup.get_text(separator='\n', strip=True)
+                all_text.append(text)
 
-    text_filename = f"{filename}.txt"
-    text_output_path = os.path.join(TEXT_DIR, text_filename)
+        full_text = '\n\n'.join(all_text)
 
-    if os.path.exists(text_output_path):
-        print("file already generated")
-        sys.exit(1)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(full_text)
+        print(f"[Extracted] EPUB text saved to: {output_path}")
+    except Exception as e:
+        print(f"[Error] Failed to extract EPUB text: {e}")
 
-    # Extract text to file
-    os.makedirs(TEXT_DIR, exist_ok=True)
-    extract_text_from_pdf(file_path, text_output_path)
 
-    # Attempt to locate existing metadata JSON
-    os.makedirs(JSON_DIR, exist_ok=True)
-    json_path = os.path.join(JSON_DIR, f"{filename}.json")
+# if __name__ == "__main__":
+#     import sys
+#     import json
+#     from configs import TEXT_DIR, JSON_DIR, TESSERACT_PATH, OCR_LANGUAGES
+#     from metadata_utils import compute_sha256, save_metadata, extract_metadata
+#     import os
 
-    if os.path.exists(json_path):
-        print(f"[Update] Found metadata JSON: {json_path}")
-        with open(json_path, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
-    else:
-        print(f"[Create] No metadata found. Creating new metadata.")
-        metadata = extract_metadata(file_path, ext)
+#     if len(sys.argv) < 2:
+#         print("Usage: python text_extraction.py <path_to_pdf>")
+#         sys.exit(1)
 
-    metadata['content'] = text_output_path
-    save_metadata(metadata, output_dir=JSON_DIR)
+#     file_path = sys.argv[1]
+
+#     if not os.path.exists(file_path):
+#         print(f"Error: File not found: {file_path}")
+#         sys.exit(1)
+
+#     filename = os.path.basename(file_path)
+#     filename = os.path.splitext(filename)[0]
+#     ext = file_path.split('.')[-1].lower()
+
+#     text_filename = f"{filename}.txt"
+#     text_output_path = os.path.join(TEXT_DIR, text_filename)
+
+#     if os.path.exists(text_output_path):
+#         print("file already generated")
+#         sys.exit(1)
+
+#     # Extract text to file
+#     os.makedirs(TEXT_DIR, exist_ok=True)
+#     extract_text_from_pdf(file_path, text_output_path)
+
+#     # Attempt to locate existing metadata JSON
+#     os.makedirs(JSON_DIR, exist_ok=True)
+#     json_path = os.path.join(JSON_DIR, f"{filename}.json")
+
+#     if os.path.exists(json_path):
+#         print(f"[Update] Found metadata JSON: {json_path}")
+#         with open(json_path, 'r', encoding='utf-8') as f:
+#             metadata = json.load(f)
+#     else:
+#         print(f"[Create] No metadata found. Creating new metadata.")
+#         metadata = extract_metadata(file_path, ext)
+
+#     metadata['content'] = text_output_path
+#     save_metadata(metadata, output_dir=JSON_DIR)
