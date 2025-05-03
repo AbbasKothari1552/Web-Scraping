@@ -24,15 +24,21 @@ This project is designed to **crawl web pages**, **download documents** (PDF, HT
 ```
 project/
 │
-├── crawler.py         # Handles crawling and downloading
-├── main.py            # Coordinates processing and text/metadata extraction
-├── extractors/        # Contains text and metadata extraction logic
-├── output/
-│   ├── pdfs/
-│   ├── epubs/
-│   ├── html/
-│   ├── texts/
-│   └── metadata/
+├── Data Harvest/
+|   └── downloads/  
+|       ├── epubs/  # epubs downloads
+|       ├── html/   # html downloads
+|       ├── pdfs/   # pdfs downloads
+|   ├── json/       # json stored per downloads
+|   ├── text/       # text extracted from the pdfs, epubs and html
+|   └── src/           
+|       ├── configs.py/          # Configuration
+|       ├── crawler.py/          # Handles crawling and downloading
+|       ├── metadata_utiles.py/  # extract metadata
+|       ├── text_extraction.py/  # extract text from the files
+|       ├── utils.py/            # helper functions
+|   └── main.py            # Coordinates processing and text/metadata extraction
+├── .gitignore/        
 └── requirements.txt   # Python dependencies
 ```
 
@@ -42,16 +48,37 @@ project/
 
 ### 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/document-harvesting.git
+git clone https://github.com/AbbasKothari1552/Web-Scraping.git
 cd document-harvesting
 ```
 
 ### 2. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
+   i. install libraries 
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   ii. Tesseract OCR Setup
+   -> Install Tesseract:
+      Download from: https://github.com/tesseract-ocr/tesseract
+   -> Set Tesseract path in `configs.py`
+      ```python
+      TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+      ```
+
+   iii. Poppler Setup (Required for pdf2image OCR support)
+   -> Install Poppler:
+      Download from: https://github.com/oschwartz10612/poppler-windows/releases
+      Extract it to a folder like `C:\poppler`
+      Add the `bin` directory (e.g., `C:\poppler\bin`) to your system `PATH`.
+   
 
 ### 3. **Set the base URL**
+Go to Data Harvest folder to access main.py
+```bash
+cd "Data Harvest"
+```
+
 Edit `main.py` to set your `BASE_URL`:
 ```python
 BASE_URL = "https://example.com"
@@ -83,18 +110,11 @@ python main.py
 4. **Delta Processing**:
    - On subsequent runs, skips documents if not modified.
 
----
-
-## 🧪 Sample Output
-
-- `output/pdfs/example_com_ab12cd34ef.pdf`
-- `output/texts/example_com_ab12cd34ef.txt`
-- `output/metadata/example_com_ab12cd34ef.json`
 
 ---
+
 
 ## ❗ Notes
 
 - Some PDFs may be password-protected and will be skipped gracefully.
 - Only PDF, EPUB, and HTML files are supported.
-- Ensure stable internet connection for crawling.
