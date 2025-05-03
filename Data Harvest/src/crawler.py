@@ -110,11 +110,6 @@ def download_file(url, download_dir, user_agent):
 
         # Step 2: Check for existing file and metadata
         json_path = os.path.join(JSON_DIR, f"{os.path.splitext(filename)[0]}.json")
-        print("file Path:", path)
-        print("json Path:", json_path)
-        print("file Path:", os.path.exists(path))
-        print("json Path:", os.path.exists(json_path))
-
         if os.path.exists(path) and os.path.exists(json_path):
             print(True)
             with open(json_path, "r") as f:
@@ -207,7 +202,9 @@ def crawl(url, base_url, user_agent, visited, download_dir, downloaded_files):
     crawl_links, download_links = classify_links(base_url, soup)
 
     # Save HTML content if this is an HTML page
-    download_file(url, download_dir, user_agent)
+    file_path, last_modified, etag = download_file(url, download_dir, user_agent)
+    if file_path:
+        downloaded_files.append((file_path, url, last_modified, etag))
 
     print("Download_links count:", len(download_links))
     print("crawl_links count:", len(crawl_links))
