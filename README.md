@@ -53,23 +53,23 @@ cd document-harvesting
 ```
 
 ### 2. **Install dependencies**
-   i. install libraries 
+   #### i. install libraries 
    ```bash
    pip install -r requirements.txt
    ```
 
-   ii. Tesseract OCR Setup
-   -> Install Tesseract:
-      Download from: https://github.com/tesseract-ocr/tesseract
-   -> Set Tesseract path in `configs.py`
+   #### ii. Tesseract OCR Setup
+   -> Install Tesseract: <br>
+      Download from: https://github.com/tesseract-ocr/tesseract <br>
+   -> Set Tesseract path in `configs.py` 
       ```python
       TESSERACT_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
       ```
 
-   iii. Poppler Setup (Required for pdf2image OCR support)
-   -> Install Poppler:
-      Download from: https://github.com/oschwartz10612/poppler-windows/releases
-      Extract it to a folder like `C:\poppler`
+   #### iii. Poppler Setup (Required for pdf2image OCR support)
+   -> Install Poppler: <br>
+      Download from: https://github.com/oschwartz10612/poppler-windows/releases <br>
+      Extract it to a folder like `C:\poppler` <br>
       Add the `bin` directory (e.g., `C:\poppler\bin`) to your system `PATH`.
    
 
