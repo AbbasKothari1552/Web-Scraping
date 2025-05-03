@@ -58,7 +58,7 @@ cd document-harvesting
    pip install -r requirements.txt
    ```
 
-   #### ii. Tesseract OCR Setup
+   #### ii. Tesseract OCR Setup (Required for some PDFs)
    -> Install Tesseract: <br>
       Download from: https://github.com/tesseract-ocr/tesseract <br>
    -> Set Tesseract path in `configs.py` 

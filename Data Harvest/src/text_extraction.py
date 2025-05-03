@@ -1,3 +1,22 @@
+"""
+text_extraction.py
+Text extraction utilities for document files (PDF, EPUB, HTML) with OCR fallback.
+
+Key Functionality:
+- Extracts text from PDFs (both embedded text and via OCR)
+- Processes EPUB documents by extracting all textual content
+- Parses HTML files to extract clean text
+- Handles both digital-born and scanned PDFs
+- Supports multilingual OCR (English + Sanskrit)
+
+Dependencies:
+    pdfminer - Embedded PDF text extraction
+    pdf2image - PDF to image conversion for OCR
+    pytesseract - OCR text recognition
+    ebooklib - EPUB parsing
+    BeautifulSoup - HTML parsing
+"""
+
 import os
 from pdfminer.high_level import extract_text as extract_pdf_text
 from pdf2image import convert_from_path
@@ -12,11 +31,25 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from .configs import TESSERACT_PATH, OCR_LANGUAGES
 
-# Set the tesseract path
+# Configure Tesseract OCR path
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_PATH
 
 
 def has_embedded_text(pdf_path, check_pages=3):
+    """
+    Checks if a PDF contains selectable/embedded text.
+    
+    Args:
+        pdf_path (str): Path to PDF file
+        check_pages (int): Number of pages to sample (default: 3)
+        
+    Returns:
+        bool: True if sufficient embedded text found
+        
+    Note:
+        Uses a threshold of 50 characters to determine if text is meaningful
+    """
+
     try:
         text = extract_pdf_text(pdf_path, maxpages=check_pages)
         return len(text.strip()) > 50  # Threshold for real text
@@ -25,6 +58,22 @@ def has_embedded_text(pdf_path, check_pages=3):
 
 
 def extract_text_with_ocr(pdf_path, txt_path):
+    """
+    Extracts text from scanned PDFs using OCR.
+    
+    Args:
+        pdf_path (str): Path to PDF file
+        txt_path (str): Output text file path
+        
+    Process:
+        1. Converts PDF pages to images
+        2. Applies OCR to each image
+        3. Saves results with page demarcations
+        
+    Note:
+        Uses language settings from configs.OCR_LANGUAGES
+    """
+
     pages = convert_from_path(pdf_path)
     with open(txt_path, 'w', encoding='utf-8') as out_file:
         for i, page in enumerate(pages):
@@ -34,6 +83,22 @@ def extract_text_with_ocr(pdf_path, txt_path):
 
 
 def extract_text_from_pdf(pdf_path, txt_output_path):
+    """
+    Main PDF text extraction function with automatic OCR fallback.
+    
+    Args:
+        pdf_path (str): Path to input PDF
+        txt_output_path (str): Path for output text file
+        
+    Workflow:
+        1. Checks for existing embedded text
+        2. If found, extracts directly
+        3. If not, falls back to OCR processing
+        
+    Note:
+        Skips processing if output file already exists
+    """
+
     if os.path.exists(txt_output_path):
         print(f"[Skip] Text already extracted: {txt_output_path}")
         return
@@ -51,6 +116,22 @@ def extract_text_from_pdf(pdf_path, txt_output_path):
 
 
 def extract_text_from_html(html_path, output_path):
+    """
+    Extracts clean text from HTML files.
+    
+    Args:
+        html_path (str): Path to HTML file
+        output_path (str): Output text file path
+        
+    Process:
+        1. Parses HTML with BeautifulSoup
+        2. Extracts all text with newline separators
+        3. Removes excess whitespace and markup
+        
+    Note:
+        Preserves basic paragraph structure but removes all HTML tags
+    """
+     
     try:
         with open(html_path, 'r', encoding='utf-8') as f:
             soup = BeautifulSoup(f, 'html.parser')
@@ -64,6 +145,22 @@ def extract_text_from_html(html_path, output_path):
 
 
 def extract_text_from_epub(epub_path, output_path):
+    """
+    Extracts text content from EPUB files.
+    
+    Args:
+        epub_path (str): Path to EPUB file
+        output_path (str): Output text file path
+        
+    Process:
+        1. Parses EPUB structure
+        2. Extracts text from all document items
+        3. Joins content with double newlines between sections
+        
+    Note:
+        Handles both XHTML and HTML content within EPUBs
+    """
+    
     try:
         book = epub.read_epub(epub_path)
         all_text = []

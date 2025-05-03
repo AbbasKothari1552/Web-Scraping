@@ -1,3 +1,27 @@
+"""
+metadata_utils.py
+Metadata extraction and processing utilities for document files (PDF, EPUB, HTML).
+
+Key Functionality:
+- Extracts metadata (title, authors, publication year, language) from files
+- Normalizes author names and date formats
+- Computes file checksums for integrity verification
+- Saves metadata to JSON files in standardized format
+
+Supported Formats:
+- PDF (via PyPDF2 and pdfminer)
+- EPUB (via ebooklib)
+- HTML (via BeautifulSoup)
+
+Dependencies:
+    PyPDF2 - PDF metadata extraction
+    ebooklib - EPUB parsing
+    pdfminer - PDF text extraction
+    langdetect - Language detection
+    BeautifulSoup - HTML parsing
+    hashlib - Checksum computation
+"""
+
 from PyPDF2 import PdfReader
 from ebooklib import epub
 from pdfminer.high_level import extract_text
@@ -11,6 +35,23 @@ import os
 
 
 def extract_metadata(file_path, file_type, url=None):
+    """
+    Main metadata extraction function that routes to format-specific handlers.
+    
+    Args:
+        file_path (str): Path to the document file
+        file_type (str): File type ('pdf', 'epub', or 'html')
+        url (str, optional): Source URL for domain extraction
+        
+    Returns:
+        dict: Extracted metadata including:
+            - title
+            - authors
+            - pub_year
+            - language
+            - site (if URL provided)
+    """
+
     metadata = {}
     if file_type == "pdf":
         metadata = extract_pdf_info(file_path)
@@ -19,7 +60,7 @@ def extract_metadata(file_path, file_type, url=None):
     elif file_type == "html":
         metadata = extract_html_info(file_path)
 
-    # Extract site from URL (e.g., "ayushportal.nic.in")
+    # Extract site domain from URL if provided
     if url:
         domain = urlparse(url).netloc
         metadata["site"] = domain
@@ -28,6 +69,23 @@ def extract_metadata(file_path, file_type, url=None):
 
 
 def extract_pdf_info(file_path):
+    """
+    Extracts metadata from PDF files using both PyPDF2 and pdfminer.
+    
+    Args:
+        file_path (str): Path to PDF file
+        
+    Returns:
+        dict: Contains:
+            - title (from metadata or 'N/A')
+            - authors (normalized list)
+            - pub_year (from text content)
+            - language (detected from text)
+            
+    Note:
+        Falls back to text analysis if standard metadata is missing
+    """
+
     # Initialize default values
     title = "N/A"
     authors = []
@@ -72,24 +130,44 @@ def extract_pdf_info(file_path):
 
 
 def extract_epub_info(file_path):
+    """
+    Extracts metadata from EPUB files using ebooklib.
+    
+    Args:
+        file_path (str): Path to EPUB file
+        
+    Returns:
+        dict: Contains:
+            - title (from DC metadata)
+            - authors (normalized list)
+            - pub_year (from DC date)
+            - language (from DC metadata)
+    """
+
     title = "N/A"
     authors = []
     language = "N/A"
     pub_year = "N/A"
 
-    try:
-        date_meta = book.get_metadata('DC', 'date')
-        if date_meta:
-            pub_year = re.search(r'\d{4}', date_meta[0][0]).group(0)  # Extract first 4-digit year
-    except:
-        pass
+    
 
     try:
         book = epub.read_epub(file_path)
+
+        # Extract publication year if available
+        try:
+            date_meta = book.get_metadata('DC', 'date')
+            if date_meta:
+                pub_year = re.search(r'\d{4}', date_meta[0][0]).group(0)  # Extract first 4-digit year
+        except:
+            pass
+        
+        # Extract core metadata
         title = book.get_metadata('DC', 'title')[0][0] if book.get_metadata('DC', 'title') else "N/A"
         authors_raw = book.get_metadata('DC', 'creator')
         authors = normalize_authors(authors_raw[0][0] if authors_raw else "N/A")
         language = book.get_metadata('DC', 'language')[0][0] if book.get_metadata('DC', 'language') else "N/A"
+    
     except Exception as e:
         print(f"[EPUB metadata error] {e}")
 
@@ -101,6 +179,20 @@ def extract_epub_info(file_path):
     }
 
 def extract_html_info(file_path):
+    """
+    Extracts metadata from HTML files using BeautifulSoup.
+    
+    Args:
+        file_path (str): Path to HTML file
+        
+    Returns:
+        dict: Contains:
+            - title (from <title> tag)
+            - authors (from meta tags)
+            - pub_year (from meta tags or content)
+            - language (from meta tags)
+    """
+
     title = "N/A"
     authors = []
     language = "N/A"
@@ -109,21 +201,32 @@ def extract_html_info(file_path):
     try:
         with open(file_path, "r", encoding='utf-8') as f:
             soup = BeautifulSoup(f, "html.parser")
+
+            # Extract title
             if soup.title:
                 title = soup.title.string.strip()
+
+            # Process meta tags
             for meta in soup.find_all("meta"):
+                # Extract authors
                 if meta.get("name") in ["author", "dc.creator"]:
                     authors_raw = meta.get("content", "N/A")
                     authors = normalize_authors(authors_raw)
+
+                # Extract language
                 if meta.get("name") == "language":
                     language = meta.get("content", "N/A")
-            for meta in soup.find_all("meta"):
+
+                # Extract publication date
                 if meta.get("name") in ["date", "publication_date"]:
                     pub_year = re.search(r'\d{4}', meta.get("content", "")).group(0)
+
+            # Fallback year extraction from text
             if pub_year == "N/A":
                 year_matches = re.findall(r'(?:19|20)\d{2}', soup.get_text())
                 if year_matches:
                     pub_year = max(set(year_matches), key=year_matches.count)
+
     except Exception as e:
         print(f"[HTML metadata error] {e}")
 
@@ -136,12 +239,41 @@ def extract_html_info(file_path):
 
 
 def format_as_iso8601(year_str):
+    """
+    Converts a year string to ISO 8601 format (YYYY-MM-DD).
+    
+    Args:
+        year_str (str): Year as string (e.g., "1998")
+        
+    Returns:
+        str: Formatted date (e.g., "1998-01-01") or "N/A" if invalid
+        
+    Note:
+        Uses January 1st as default when only year is known
+    """
+
     if year_str == "N/A" or not year_str.isdigit():
         return "N/A"
     return f"{year_str}-01-01"  # Default to January 1 if only year is known
 
 
 def normalize_authors(authors_raw):
+    """
+    Normalizes author names from various input formats to consistent list.
+    
+    Args:
+        authors_raw (str/list): Raw author information from metadata
+        
+    Returns:
+        list: Cleaned list of author names in "Title Case"
+        
+    Examples:
+        >>> normalize_authors("John Doe; Jane Smith")
+        ['John Doe', 'Jane Smith']
+        >>> normalize_authors("Author1, Author2 and Author3")
+        ['Author1', 'Author2', 'Author3']
+    """
+
     if not authors_raw or authors_raw == "N/A":
         return []
 
@@ -149,14 +281,27 @@ def normalize_authors(authors_raw):
         # EPUB returns list from ebooklib already
         authors_raw = " ".join(authors_raw)
 
-    # Unified splitting: handle commas, semicolons, "and", "&"
+    # Split on common delimiters (comma, semicolon, "and", "&")
     parts = re.split(r'\s*(?:,|;|\band\b|\&)\s*', authors_raw, flags=re.IGNORECASE)
     
-    # Remove empty strings and title case (e.g., "john doe" -> "John Doe")
+    # Clean and format each name
     return [part.strip().title() for part in parts if part.strip()]
 
 
 def compute_sha256(file_path):
+    """
+    Computes SHA-256 checksum for file integrity verification.
+    
+    Args:
+        file_path (str): Path to file
+        
+    Returns:
+        str: Hexadecimal digest of file contents or None on error
+        
+    Note:
+        Processes file in 4096-byte chunks for memory efficiency
+    """
+    
     sha256_hash = hashlib.sha256()
     try:
         with open(file_path, "rb") as f:
@@ -169,6 +314,17 @@ def compute_sha256(file_path):
     
 
 def save_metadata(metadata, output_dir="Data Harvest/json"):
+    """
+    Saves metadata dictionary to JSON file.
+    
+    Args:
+        metadata (dict): Metadata to save
+        output_dir (str): Output directory path
+        
+    File Naming:
+        Uses document_id from metadata or "unknown" as filename
+    """
+
     os.makedirs(output_dir, exist_ok=True)
     doc_id = metadata.get("document_id", "unknown")
     output_path = os.path.join(output_dir, f"{doc_id}.json")
